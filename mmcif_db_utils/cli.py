@@ -6,6 +6,7 @@ import logging
 
 from mmcif_db_utils.config import Config
 from mmcif_db_utils.data_loader import DataLoader
+from mmcif_db_utils.models import drop_schema, create_tables, create_all_tables
 
 from sqlalchemy import create_engine
 from wwpdb.utils.config.ConfigInfo import ConfigInfo
@@ -49,17 +50,36 @@ def load(db_url, categories, filelist, verbose):
 @click.command()
 @click.argument("db_url")
 @click.argument("categories")
-@click.option("--verbose", flag_value=True, help="Verbose output")
-def create_schemas(db_url, categories):
+@click.option("--drop", "-d", flag_value=True, help="Drop schema before creating")
+@click.option("--verbose", "-v", flag_value=True, help="Verbose output")
+def create_schemas(db_url, categories, drop, verbose):
     """Create database schema for CATEGORIES in database
     described by DB_URL.
 
-    DB_URL is a connection string in the format mysql+pymysql://user:password@host:port/dbname    
+    DB_URL is a connection string in the format mysql+pymysql://user:password@host:port/dbname
     CATEGORIES is a file containing a list of categories to load, separated by newlines
     """
-    engine = create_engine(db_url)
-    config = Config()
-    loader.setup_schema()
+    try:
+        engine = create_engine(db_url)
+
+        if drop:
+            logging.info(f"Dropping schema in {re.sub(r':.*@', ':****@', db_url)}")
+            drop_schema(engine)
+
+        if categories == "all":
+            create_all_tables(engine)
+            click.echo(f"Created all tables in {re.sub(r':.*@', ':****@', db_url)}")
+            return
+
+        with open(categories) as fp:
+            categories = fp.read().splitlines()
+            create_tables(engine, categories)
+            click.echo(f"Created tables in {re.sub(r':.*@', ':****@', db_url)}")
+    except Exception as e:
+        click.echo(f"Error creating schemas. Set the verbose flag to see more information")
+
+        if verbose:
+            logging.error(e)
 
 
 cli.add_command(load)

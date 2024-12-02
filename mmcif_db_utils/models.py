@@ -1,5 +1,7 @@
-from sqlalchemy import MetaData, Table, Column, Integer, String, Float, Date, DateTime
+from dateutil.parser import parse
+from datetime import date
 
+from sqlalchemy import MetaData, Table, Column, Integer, String, Float, Date, DateTime, Boolean
 
 metadata_obj = MetaData()
 
@@ -3756,19 +3758,19 @@ ndb_struct_na_base_pair_step = Table("ndb_struct_na_base_pair_step",
     Column("i_label_asym_id_1", String(20), primary_key=True),
     Column("i_label_comp_id_1", String(10), primary_key=True),
     Column("i_label_seq_id_1", Integer, primary_key=True),
-    Column("i_symmetry_1", String(10), primary_key=True, default="1_555"),
+    Column("i_symmetry_1", String(10), default="1_555"),
     Column("j_label_asym_id_1", String(20), primary_key=True),
     Column("j_label_comp_id_1", String(10), primary_key=True),
     Column("j_label_seq_id_1", Integer, primary_key=True),
-    Column("j_symmetry_1", String(10), primary_key=True, default="1_555"),
+    Column("j_symmetry_1", String(10), default="1_555"),
     Column("i_label_asym_id_2", String(20), primary_key=True),
     Column("i_label_comp_id_2", String(10), primary_key=True),
     Column("i_label_seq_id_2", Integer, primary_key=True),
-    Column("i_symmetry_2", String(10), primary_key=True, default="1_555"),
+    Column("i_symmetry_2", String(10), default="1_555"),
     Column("j_label_asym_id_2", String(20), primary_key=True),
     Column("j_label_comp_id_2", String(10), primary_key=True),
     Column("j_label_seq_id_2", Integer, primary_key=True),
-    Column("j_symmetry_2", String(10), primary_key=True, default="1_555"),
+    Column("j_symmetry_2", String(10), default="1_555"),
     Column("i_auth_asym_id_1", String(20)),
     Column("i_auth_seq_id_1", String(20)),
     Column("i_PDB_ins_code_1", String(20), nullable=True),
@@ -9350,6 +9352,11 @@ diffrn_detector_element = Table("diffrn_detector_element",
     Column("reference_center_units", String(20), nullable=True)
 )
 
+def drop_schema(engine):
+    with engine.connect() as conn:
+        with conn.begin():
+            metadata_obj.drop_all(conn)
+
 
 def create_all_tables(engine):
     with engine.connect() as conn:
@@ -9362,4 +9369,33 @@ def create_tables(engine, categories):
         with conn.begin():
             for category in categories:
                 if category in metadata_obj.tables:
-                    metadata_obj.tables[category].create(conn)
+                    metadata_obj.tables[category].create(conn, checkfirst=True)
+
+
+def get_table(table_name):
+    return metadata_obj.tables.get(table_name)
+
+
+def cast_type(table_obj: Table, tag: str, value):
+    if not isinstance(table_obj.c[tag].type, String) and value == "":
+        return None
+
+    if isinstance(table_obj.c[tag].type, Float):
+        return float(value)
+
+    if isinstance(table_obj.c[tag].type, Integer):
+        return int(value)
+
+    if isinstance(table_obj.c[tag].type, DateTime):
+        try:
+            return parse(value)
+        except ValueError:
+            return value
+
+    if isinstance(table_obj.c[tag].type, Date):
+        return date.fromisoformat(value)
+
+    if isinstance(table_obj.c[tag].type, Boolean):
+        return bool(value)
+
+    return value
