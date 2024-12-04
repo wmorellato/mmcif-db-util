@@ -5,11 +5,10 @@ import click
 import logging
 
 from mmcif_db_utils.config import Config
-from mmcif_db_utils.data_loader import DataLoader
+from mmcif_db_utils.data_loader import DataLoaderFactory
 from mmcif_db_utils.models import drop_schema, create_tables, create_all_tables
 
 from sqlalchemy import create_engine
-from wwpdb.utils.config.ConfigInfo import ConfigInfo
 
 logging.basicConfig(level=logging.INFO)
 
@@ -40,7 +39,7 @@ def load(db_url, categories, filelist, verbose):
 
     config = Config()
     engine = create_engine(db_url)
-    loader = DataLoader(config=config, engine=engine)
+    loader = DataLoaderFactory.get_loader(config, engine, categories, filelist)
     start = time.time()
     loader.load()
     end = time.time()
@@ -59,6 +58,10 @@ def create_schemas(db_url, categories, drop, verbose):
     DB_URL is a connection string in the format mysql+pymysql://user:password@host:port/dbname
     CATEGORIES is a file containing a list of categories to load, separated by newlines
     """
+    if verbose:
+        logging.basicConfig(level=logging.DEBUG)
+        logging.getLogger("pdbe_db_loader.data_loader").setLevel(logging.DEBUG)
+
     try:
         engine = create_engine(db_url)
 
