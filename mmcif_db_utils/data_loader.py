@@ -3,7 +3,6 @@ import queue
 import logging
 
 from abc import ABC
-from typing import List
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 

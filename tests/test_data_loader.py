@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.fixture
 def db_engine():
-    engine = create_engine(f"sqlite:///test.db")
+    engine = create_engine("sqlite+pysqlite:///:memory:")
     yield engine
     engine.dispose()
 
