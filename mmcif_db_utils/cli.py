@@ -6,11 +6,24 @@ import logging
 
 from mmcif_db_utils.config import Config
 from mmcif_db_utils.data_loader import DataLoaderFactory
+from mmcif_db_utils.enums import DefaultSchemas
 from mmcif_db_utils.models import drop_schema, create_tables, create_all_tables, metadata_obj
 
 from sqlalchemy import create_engine
 
 logging.basicConfig(level=logging.INFO)
+
+
+def get_category_list(cat_param):
+    if os.path.exists(cat_param):
+        with open(cat_param) as fp:
+            return fp.read().splitlines()
+
+    try:
+        schema = DefaultSchemas(cat_param)
+        return schema.get_category_list()
+    except ValueError:
+        raise ValueError(f"Invalid schema: {cat_param}")
 
 
 @click.group()
@@ -37,15 +50,11 @@ def load(db_url, categories, filelist, verbose):
 
     click.echo(f"Loading model data into {re.sub(r':.*@', ':****@', db_url)}")
 
-    if categories != "all" and not os.path.exists(categories):
-        click.echo(f"Categories file {categories} not found")
+    try:
+        clist = get_category_list(categories)
+    except ValueError as e:
+        click.echo("You didn't provide a valid schema or file. Valid schemas are: 'compv4', 'da_internal', 'pdbe_all'")
         return
-
-    if categories == "all":
-        clist = metadata_obj.tables.keys()
-    else:
-        with open(categories) as fp:
-            clist = fp.read().splitlines()
 
     if not os.path.exists(filelist):
         click.echo(f"Filelist {filelist} not found")

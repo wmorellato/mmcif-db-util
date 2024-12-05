@@ -3,6 +3,9 @@ name = "mmcif_db_utils"
 version = "0.1.0"
 description = "A module for loading model data into the database."
 authors = ["Weslley Morellato Bueno <wbueno@ebi.ac.uk>"]
+include = [
+    { path = "mmcif_db_utils/data" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"
