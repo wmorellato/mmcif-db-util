@@ -6,7 +6,7 @@ import logging
 
 from mmcif_db_utils.config import Config
 from mmcif_db_utils.data_loader import DataLoaderFactory
-from mmcif_db_utils.models import drop_schema, create_tables, create_all_tables
+from mmcif_db_utils.models import drop_schema, create_tables, create_all_tables, metadata_obj
 
 from sqlalchemy import create_engine
 
@@ -28,7 +28,7 @@ def load(db_url, categories, filelist, verbose):
     into the database described by DB_URL.
 
     DB_URL is a connection string in the format mysql+pymysql://user:password@host:port/dbname    
-    CATEGORIES is a file containing a list of categories to load, separated by newlines
+    CATEGORIES is a file containing a list of categories to load, separated by newlines. The value "all" will load all categories.
     FILELIST is a file containing a list of absolute paths to mmCIF files to load, separated by newlines
     """
     if verbose:
@@ -37,9 +37,26 @@ def load(db_url, categories, filelist, verbose):
 
     click.echo(f"Loading model data into {re.sub(r':.*@', ':****@', db_url)}")
 
+    if categories != "all" and not os.path.exists(categories):
+        click.echo(f"Categories file {categories} not found")
+        return
+
+    if categories == "all":
+        clist = metadata_obj.tables.keys()
+    else:
+        with open(categories) as fp:
+            clist = fp.read().splitlines()
+
+    if not os.path.exists(filelist):
+        click.echo(f"Filelist {filelist} not found")
+        return
+
+    with open(filelist) as fp:
+        flist = fp.read().splitlines()
+
     config = Config()
     engine = create_engine(db_url)
-    loader = DataLoaderFactory.get_loader(config, engine, categories, filelist)
+    loader = DataLoaderFactory.get_loader(config, engine, clist, flist)
     start = time.time()
     loader.load()
     end = time.time()
