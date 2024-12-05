@@ -41,7 +41,9 @@ def load(db_url, categories, filelist, verbose):
     into the database described by DB_URL.
 
     DB_URL is a connection string in the format mysql+pymysql://user:password@host:port/dbname    
-    CATEGORIES is a file containing a list of categories to load, separated by newlines. The value "all" will load all categories.
+    CATEGORIES is either:
+        - A file containing a list of categories to load, separated by newlines.
+        - One of 'compv4', 'da_internal', 'pdbe_all'.
     FILELIST is a file containing a list of absolute paths to mmCIF files to load, separated by newlines
     """
     if verbose:
