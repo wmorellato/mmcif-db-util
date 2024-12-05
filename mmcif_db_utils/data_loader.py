@@ -237,7 +237,7 @@ class MysqlDataLoader(DataLoader):
                     if table is None:
                         continue
 
-                    stmt = mysql_insert(table).values(data).on_duplicate_key_update(**data)
+                    stmt = mysql_insert(table).values(data).prefix_with("IGNORE")
                     conn.execute(stmt)
 
 
