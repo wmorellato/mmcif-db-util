@@ -5,9 +5,12 @@ import click
 import logging
 
 from mmcif_db_utils.config import Config
-from mmcif_db_utils.data_loader import DataLoaderFactory
-from mmcif_db_utils.enums import DefaultSchemas
-from mmcif_db_utils.models import drop_schema, create_tables, create_all_tables, metadata_obj
+from mmcif_db_utils.data_loader.loader import DataLoaderFactory
+from mmcif_db_utils.data_loader.enums import DefaultSchemas
+from mmcif_db_utils.data_loader.models import drop_schema, create_tables
+from mmcif_db_utils.schema.printers import SqlAlchemyOrmPrinter, SqlAlchemyCorePrinter
+from mmcif_db_utils.schema.mmcif_dict import DictReader, ItemFilter
+from mmcif_db_utils.schema.mappings import SchemaMap
 
 from sqlalchemy import create_engine
 
@@ -24,6 +27,18 @@ def get_category_list(cat_param):
         return schema.get_category_list()
     except ValueError:
         raise ValueError(f"Invalid schema: {cat_param}")
+
+
+def get_printer(model, include_imports, fp=None):
+    if model == "orm":
+        return SqlAlchemyOrmPrinter(fp=fp, include_imports=include_imports)
+    elif model == "core":
+        return SqlAlchemyCorePrinter(fp=fp, include_imports=include_imports)
+
+
+def get_filtered_items(path):
+    with open(path) as f:
+        return set([line.strip() for line in f])
 
 
 @click.group()
@@ -55,7 +70,7 @@ def load(db_url, categories, filelist, verbose):
     try:
         clist = get_category_list(categories)
     except ValueError as e:
-        click.echo("You didn't provide a valid schema or file. Valid schemas are: 'compv4', 'da_internal', 'pdbe_all'")
+        click.echo("You didn't provide a valid schema or file with categories. Valid schemas are: 'compv4', 'da_internal', 'pdbe_all'")
         return
 
     if not os.path.exists(filelist):
@@ -84,7 +99,9 @@ def create_schemas(db_url, categories, drop, verbose):
     described by DB_URL.
 
     DB_URL is a connection string in the format mysql+pymysql://user:password@host:port/dbname
-    CATEGORIES is a file containing a list of categories to load, separated by newlines
+    CATEGORIES is either:
+        - A file containing a list of categories to load, separated by newlines.
+        - One of 'compv4', 'da_internal', 'pdbe_all'.
     """
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
@@ -97,15 +114,14 @@ def create_schemas(db_url, categories, drop, verbose):
             logging.info(f"Dropping schema in {re.sub(r':.*@', ':****@', db_url)}")
             drop_schema(engine)
 
-        if categories == "all":
-            create_all_tables(engine)
-            click.echo(f"Created all tables in {re.sub(r':.*@', ':****@', db_url)}")
+        try:
+            categories = get_category_list(categories)
+        except ValueError as e:
+            click.echo("You didn't provide a valid schema or file with categories. Valid schemas are: 'compv4', 'da_internal', 'pdbe_all'")
             return
 
-        with open(categories) as fp:
-            categories = fp.read().splitlines()
-            create_tables(engine, categories)
-            click.echo(f"Created tables in {re.sub(r':.*@', ':****@', db_url)}")
+        create_tables(engine, categories)
+        click.echo(f"Created tables in {re.sub(r':.*@', ':****@', db_url)}")
     except Exception as e:
         click.echo(f"Error creating schemas. Set the verbose flag to see more information")
 
@@ -113,8 +129,59 @@ def create_schemas(db_url, categories, drop, verbose):
             logging.error(e)
 
 
+@click.command()
+@click.argument("mmcif_dictionary", type=click.Path())
+@click.argument("categories")
+@click.option("--model", type=str, default="orm", help="Choose between 'orm' and 'core' models")
+@click.option("--include-items-file", type=click.Path(), help="Path to the file containing the list of categories and items to be included. The file have one 'category_name.item_name' per line. Any item not included in the file will be ignored. Cannot be used with --exclude-items-file.")
+@click.option("--exclude-items-file", type=click.Path(), help="Path to the file containing the list of categories and items to be included. The file have one 'category_name.item_name' per line. Any item not included in the file will be processed. Cannot be used with --include-items-file.")
+@click.option("--output-file", type=click.Path(), help="Path to the output file")
+@click.option("--verbose", "-v", is_flag=True, help="Print debug messages")
+def create_model(mmcif_dictionary, categories, model, include_items_file, exclude_items_file, output_file, verbose):
+    """Create SQLAlchemy models for categories based on the
+    input MMCIF_DICTIONARY.
+
+    CATEGORIES is either:
+    - A file containing a list of categories to load, separated by newlines.
+    - One of 'compv4', 'da_internal', 'pdbe_all'.
+    """
+    included_items = []
+    excluded_items = []
+
+    if verbose:
+        logging.basicConfig(level=logging.DEBUG)
+        logging.getLogger("mmcif_dict").setLevel(logging.DEBUG)
+
+    cr = DictReader(path=mmcif_dictionary)
+
+    if include_items_file and exclude_items_file:
+        raise click.UsageError("These options are mutually exclusive: --include-items-file, --exclude-items-file")
+
+    try:
+        categories = get_category_list(categories)
+    except ValueError as e:
+        click.echo("You didn't provide a valid schema or file with categories. Valid schemas are: 'compv4', 'da_internal', 'pdbe_all'")
+        return
+
+    if include_items_file:
+        included_items = get_filtered_items(include_items_file)
+
+    if exclude_items_file:
+        excluded_items = get_filtered_items(exclude_items_file)
+
+    filter = ItemFilter(include_items=included_items, exclude_items=excluded_items)
+    cat_objs = cr.get_categories(categories=categories, filter=filter)
+
+    with open(output_file, "w") if output_file else sys.stdout as f:
+        mp = get_printer(model, include_imports=True, fp=f)
+        sm = SchemaMap(printer=mp, ignore_relationships=True)
+        sm.add_categories(cat_objs)
+        sm.print_models()
+
+
 cli.add_command(load)
 cli.add_command(create_schemas)
+cli.add_command(create_model)
 
 
 if __name__ == '__main__':

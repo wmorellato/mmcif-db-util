@@ -9352,6 +9352,7 @@ diffrn_detector_element = Table("diffrn_detector_element",
     Column("reference_center_units", String(20), nullable=True)
 )
 
+
 def drop_schema(engine):
     with engine.connect() as conn:
         with conn.begin():

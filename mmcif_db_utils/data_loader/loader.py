@@ -11,7 +11,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from gemmi import cif
 
-from mmcif_db_utils.models import get_table, cast_type
+from mmcif_db_utils.data_loader.models import get_table, cast_type
 
 logger = logging.getLogger(__name__)
 
