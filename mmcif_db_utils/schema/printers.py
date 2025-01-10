@@ -38,8 +38,8 @@ class SqlAlchemyCorePrinter:
         params = []
         if column.index:
             params.append("primary_key=True")
-        if column.nullable:
-            params.append(f"nullable={column.nullable}")
+        if not column.nullable and not column.index:
+            params.append(f"nullable=False")
         if column.default is not None:
             if isinstance(column.default, str):
                 params.append(f'default="{column.default}"')
