@@ -149,6 +149,8 @@ class DataLoader(ABC):
                 db_batch.append(data)
 
             if len(db_batch) >= self.config.batch_size:
+                logger.info(f"Loading batch for worker {worker} ({len(db_batch)} files)")
+
                 try:
                     self._engine_load(db_batch)
                 except Exception as e:
@@ -180,6 +182,7 @@ class DataLoader(ABC):
         Raises:
             Any exceptions raised by the worker threads.
         """
+        logger.info(f"Loading {len(self.filelist)} files into the database")
         file_queue = queue.Queue(maxsize=self.config.queue_size)
 
         count = 0
