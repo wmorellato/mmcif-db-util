@@ -154,7 +154,7 @@ class DataLoader(ABC):
                 try:
                     self._engine_load(db_batch)
                 except Exception as e:
-                    logger.error(f"Error loading data for worker {worker} from {file}: {str(e)}")
+                    logger.error(f"Error loading data for worker {worker}: {str(e)[:1024]}...{str(e)[-1024:]}")
                 finally:
                     db_batch.clear()
 
@@ -164,7 +164,7 @@ class DataLoader(ABC):
             try:
                 self._engine_load(db_batch)
             except Exception as e:
-                logger.error(f"Error loading remaining data for worker {worker}: {str(e)}")
+                logger.error(f"Error loading remaining data for worker {worker}: {str(e)[:1024]}...{str(e)[-1024:]}")
             finally:
                 db_batch.clear()
 
