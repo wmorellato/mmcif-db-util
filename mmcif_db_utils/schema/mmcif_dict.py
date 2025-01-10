@@ -51,8 +51,8 @@ class Item:
 class Category:
     id: str
     description: str
-    key_names: list[str]
-    items: list[Item] = field(default_factory=list)
+    key_names: list
+    items: list = field(default_factory=list)
 
     def add_item(self, item: Item, filter: ItemFilter = None):
         if self.id in filter.filtered_categories:
@@ -74,7 +74,7 @@ class DictReader:
     def __init__(self, path: str) -> None:
         self._doc = cif.read_file(path)
 
-    def get_categories(self, categories: list[str], filter: ItemFilter = None) -> list[Category]:
+    def get_categories(self, categories: list, filter: ItemFilter = None) -> list:
         cat_objs = {}
         search_set = set(categories)
         filter = filter or ItemFilter()
