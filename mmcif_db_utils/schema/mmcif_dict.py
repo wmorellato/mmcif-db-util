@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class ItemFilter:
-    def __init__(self, include_items: list[str] = [], exclude_items: set[str] = []):
+    def __init__(self, include_items: list = [], exclude_items: set = []):
         self.filtered_categories = set()
         self.include_items = set(include_items)
         self.exclude_items = set(exclude_items)
