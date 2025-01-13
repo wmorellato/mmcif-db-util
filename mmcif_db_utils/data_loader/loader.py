@@ -1,4 +1,5 @@
 import os
+import time
 import queue
 import logging
 
@@ -235,8 +236,7 @@ class MysqlDataLoader(DataLoader):
         for attempt in range(retries):
             try:
                 with self.engine.connect() as conn:
-                    logger.info("Loading batch into the database")
-
+                    start = time.time()
                     for category, data in grouped_data.items():
                         table = get_table(category)
                         if table is None:
@@ -245,6 +245,8 @@ class MysqlDataLoader(DataLoader):
                         stmt = mysql_insert(table).values(data).prefix_with("IGNORE")
                         conn.execute(stmt)
                         conn.commit()
+                    end = time.time()
+                    logger.info("Loaded batch into the database in %.2f seconds", end - start)
                     break
             except OperationalError as e:
                 if "Lock wait timeout exceeded" in str(e):
