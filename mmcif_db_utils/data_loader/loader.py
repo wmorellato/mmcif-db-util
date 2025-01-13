@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.exc import OperationalError
 
 from gemmi import cif
 
@@ -127,7 +128,7 @@ class DataLoader(ABC):
             logger.error(f"Error reading file {file}: {e}")
             return {}
 
-    def _engine_load(self, batch_data):
+    def _engine_load(self, batch_data, retries=3):
         raise NotImplementedError
 
     def _data_builder_task(self, worker, file_queue):
@@ -212,13 +213,13 @@ class MysqlDataLoader(DataLoader):
     This class extends the base DataLoader class and provides functionality
     to load data into a MySQL database using upsert (insert or replace) operation.
 
-    Note: The upsert operation is achieved by using `on_duplicate_key_update`.
+    Note: The upsert operation is achieved by using `IGNORE`.
     """
 
     def __init__(self, config, engine, categories, filelist):
         super().__init__(config, engine, categories, filelist)
 
-    def _engine_load(self, batch_data):
+    def _engine_load(self, batch_data, retries=3):
         """
         Load the batch data into the MySQL database using upserts.
 
@@ -231,17 +232,25 @@ class MysqlDataLoader(DataLoader):
             for category, data in entry.items():
                 grouped_data[category].extend(data)
 
-        with self.engine.connect() as conn:
-            with conn.begin():
-                logger.info("Loading batch into the database")
+        for attempt in range(retries):
+            try:
+                with self.engine.connect() as conn:
+                    with conn.begin():
+                        logger.info("Loading batch into the database")
 
-                for category, data in grouped_data.items():
-                    table = get_table(category)
-                    if table is None:
-                        continue
+                        for category, data in grouped_data.items():
+                            table = get_table(category)
+                            if table is None:
+                                continue
 
-                    stmt = mysql_insert(table).values(data).prefix_with("IGNORE")
-                    conn.execute(stmt)
+                            stmt = mysql_insert(table).values(data).prefix_with("IGNORE")
+                            conn.execute(stmt)
+                    break
+            except OperationalError as e:
+                if "Lock wait timeout exceeded" in str(e):
+                    print(f"Retrying transaction (attempt {attempt + 1})...")
+                else:
+                    raise
 
 
 class SqliteDataLoader(DataLoader):
@@ -258,7 +267,7 @@ class SqliteDataLoader(DataLoader):
     def __init__(self, config, engine, categories, filelist):
         super().__init__(config, engine, categories, filelist)
 
-    def _engine_load(self, batch_data):
+    def _engine_load(self, batch_data, retries=3):
         grouped_data = defaultdict(list)
         for entry in batch_data:
             for category, data in entry.items():
