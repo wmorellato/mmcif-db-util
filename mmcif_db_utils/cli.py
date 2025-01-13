@@ -82,7 +82,7 @@ def load(db_url, categories, filelist, verbose):
         flist = fp.read().splitlines()
 
     config = Config()
-    engine = create_engine(db_url)
+    engine = create_engine(db_url, future=True)
     loader = DataLoaderFactory.get_loader(config, engine, clist, flist)
     start = time.time()
     loader.load()
