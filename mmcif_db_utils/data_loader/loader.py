@@ -93,7 +93,7 @@ class ModelFileReader:
         self._entry_id = block.name
         for cat in block.get_mmcif_category_names():
             table = block.find_mmcif_category(cat)
-            model_data[cat] = self._table_to_dict(cat, table)
+            model_data[cat] = self._table_to_dict(cat.rstrip("."), table)
 
         return model_data
 
