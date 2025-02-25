@@ -91,13 +91,8 @@ class ModelFileReader:
             raise ValueError(f"No data block found in the file: {file_path}")
 
         self._entry_id = block.name
-        for cat in self.categories:
-            table = block.find_mmcif_category(f"_{cat}")
-
-            if not table:
-                logger.debug(f"Category {cat} not found in {file_path}")
-                continue
-        
+        for cat in block.get_mmcif_category_names():
+            table = block.find_mmcif_category(cat)
             model_data[cat] = self._table_to_dict(cat, table)
 
         return model_data
@@ -246,7 +241,7 @@ class MysqlDataLoader(DataLoader):
                         conn.execute(stmt)
                         conn.commit()
                     end = time.time()
-                    logger.info("Loaded batch into the database in %.2f seconds", end - start)
+                    logger.info("Loaded batch into database in %.2f seconds", end - start)
                     break
             except OperationalError as e:
                 if "Lock wait timeout exceeded" in str(e):
