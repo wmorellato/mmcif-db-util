@@ -5,7 +5,7 @@ import logging
 from sqlalchemy import create_engine, MetaData
 
 from mmcif_db_utils.config import Config
-from mmcif_db_utils.models import create_tables
+from mmcif_db_utils.data_loader.models import create_tables
 
 logger = logging.getLogger(__name__)
 

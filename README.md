@@ -4,11 +4,7 @@ This CLI tool is designed to load data from mmCIF files into a database. It supp
 
 ## Installation
 
-To install the package, you can use `pip`:
-
-```sh
-pip install mmcif-db-utils
-```
+To install the package, clone this repository and install it using `pip`.
 
 ## Usage
 
@@ -22,8 +18,8 @@ mmcif-db-utils load [OPTIONS] DB_URL CATEGORIES FILELIST
 
 #### Arguments
 
-- `DB_URL`: The database connection string in the format mysql+pymysql://user:password@host:port/dbname.
-- `CATEGORIES`: Either a file containing a list of categories to load (one per line) or one of the predefined schemas (compv4, da_internal, pdbe_all).
+- `DB_URL`: The database connection string in the format `mysql+pymysql://user:password@host:port/dbname`.
+- `CATEGORIES`: Either a file containing a list of categories to load (one per line) or one of the predefined schemas (`compv4`, `da_internal`, `pdbe_all`).
 - `FILELIST`: A file containing a list of absolute paths to mmCIF files to load (one per line).
 
 #### Options

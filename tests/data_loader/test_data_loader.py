@@ -1,22 +1,22 @@
 import os
 import pytest
-import shutil
 import logging
 
-from sqlalchemy import create_engine, MetaData, select
+from sqlalchemy import create_engine, select
 
 from mmcif_db_utils.config import Config
-from mmcif_db_utils.data_loader import DataLoaderFactory
-from mmcif_db_utils.models import database_2, create_tables
+from mmcif_db_utils.data_loader.loader import DataLoaderFactory
+from mmcif_db_utils.data_loader.models import database_2, create_tables
 
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def db_engine():
-    engine = create_engine("sqlite+pysqlite:///:memory:")
+    engine = create_engine("sqlite+pysqlite:///test.db")
     yield engine
     engine.dispose()
+    os.remove("test.db")
 
 
 @pytest.mark.integration
